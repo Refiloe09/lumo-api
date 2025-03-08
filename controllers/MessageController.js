@@ -60,7 +60,7 @@ export const getMessages = async (req, res, next) => {
 
     const order = await prisma.orders.findUnique({
       where: { id: parseInt(req.params.orderId) },
-      include: { service: true },
+      include: { services: true },
     });
 
     if (!order) {
@@ -69,8 +69,8 @@ export const getMessages = async (req, res, next) => {
 
     let recipientId;
     if (order.buyerId === user.id) {
-      recipientId = order.service.userId;
-    } else if (order.service.userId === user.id) {
+      recipientId = order.services.userId;
+    } else if (order.services.userId === user.id) {
       recipientId = order.buyerId;
     }
 

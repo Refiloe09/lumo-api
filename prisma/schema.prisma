@@ -30,6 +30,7 @@ model Services {
   title String 
   description String
   category String
+  subcategory String @default("Sales Strategy Development")
   deliveryTime Int
   revisions Int
   features String[]
@@ -41,6 +42,11 @@ model Services {
   userId Int
   orders Orders[]
   reviews Reviews[]
+  @@index([title])
+  @@index([description])
+  @@index([category])
+  @@index([subcategory])
+  @@index([shortDesc])
 }
 
 
@@ -49,11 +55,13 @@ model Orders {
   createdAt DateTime @default(now())
   buyer User @relation(fields: [buyerId],references: [id])
   buyerId Int
-  paymentIntent String @unique
   isCompleted Boolean @default(false)
   services Services @relation(fields:[serviceId],references: [id])
   serviceId Int
   price Int
+  contactEmail  String?  // Add these fields
+  contactPhone  String?
+  notes         String?
   messages Message[]
 }
 

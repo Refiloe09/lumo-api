@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { existsSync, renameSync, unlinkSync } from "fs";
 
 const prisma = new PrismaClient(); // ✅ Create a single Prisma instance
@@ -88,10 +88,16 @@ export const getServiceData = async (req, res, next) => {
       include: {
         reviews: {
           include: {
-            reviewer: true,
+            reviewer: true, // ✅ Includes full reviewer info
           },
         },
-        createdBy: true,
+        createdBy: { // ✅ Includes the creator's info
+          include: {
+            services: {
+              include: { reviews: true }, // ✅ Fetch all services with reviews
+            },
+          },
+        },
       },
     });
 
@@ -99,36 +105,42 @@ export const getServiceData = async (req, res, next) => {
       return res.status(404).send("Service not found.");
     }
 
-    const userWithServices = await prisma.user.findUnique({
-      where: { id: service.createdBy.id },
-      include: {
-        services: {
-          include: { reviews: true },
-        },
-      },
-    });
-
-    const totalReviews = userWithServices.services.reduce(
-      (acc, service) => acc + service.reviews.length,
+    // ✅ Compute total reviews and average rating
+    const totalReviews = service.createdBy.services.reduce(
+      (acc, srv) => acc + srv.reviews.length,
       0
     );
 
-    const averageRating = (
-      userWithServices.services.reduce(
-        (acc, service) =>
-          acc + service.reviews.reduce((sum, review) => sum + review.rating, 0),
-        0
-      ) / totalReviews
-    ).toFixed(1);
+    const averageRating = totalReviews > 0
+      ? (
+          service.createdBy.services.reduce(
+            (acc, srv) =>
+              acc +
+              srv.reviews.reduce((sum, review) => sum + review.rating, 0),
+            0
+          ) / totalReviews
+        ).toFixed(1)
+      : "0.0";
 
-    return res
-      .status(200)
-      .json({ service: { ...service, totalReviews, averageRating } });
+    // ✅ Ensure `clerkUserId` is included in the response
+    const processedService = {
+      ...service,
+      totalReviews,
+      averageRating,
+      createdBy: {
+        id: service.createdBy.id,
+        email: service.createdBy.email,
+        clerkUserId: service.createdBy.clerkUserId, // ✅ Ensure Clerk User ID is included
+      },
+    };
+
+    return res.status(200).json({ service: processedService });
   } catch (err) {
-    console.error(err);
+    console.error("Error fetching service data:", err);
     return res.status(500).send("Internal Server Error");
   }
 };
+
 
 export const editService = async (req, res, next) => {
   try {
@@ -191,33 +203,74 @@ export const editService = async (req, res, next) => {
 
 export const searchServices = async (req, res, next) => {
   try {
-    const services = await prisma.services.findMany(
-      createSearchQuery(req.query.searchTerm, req.query.category)
-    );
+    console.log(req.query);
+    let { query, category } = req.query;
 
-    return res.status(200).json({ services });
+    // Ensure values are valid strings or set them to `null`
+    let searchTerm = query?.trim() || null;
+    category = category?.trim() || null;
+
+    // Construct dynamic query conditions
+    const whereConditions = [];
+
+    if (searchTerm) {
+      whereConditions.push(
+        { title: { contains: searchTerm, mode: "insensitive" } },
+        { description: { contains: searchTerm, mode: "insensitive" } },
+        { category: { contains: searchTerm, mode: "insensitive" } },
+        { subcategory: { contains: searchTerm, mode: "insensitive" } },
+        { shortDesc: { contains: searchTerm, mode: "insensitive" } },
+        { features: { has: searchTerm } } // `has` works for arrays
+      );
+    }
+
+    if (category) {
+      whereConditions.push(
+        { category: { contains: category, mode: "insensitive" } },
+        { subcategory: { contains: category, mode: "insensitive" } }
+      );
+    }
+
+    // Execute query only if there are valid conditions
+    const services = await prisma.services.findMany({
+      where: whereConditions.length ? { OR: whereConditions } : {},
+      include: {
+        createdBy: true, // ✅ Includes user data
+        reviews: {
+          include: {
+            reviewer: true, // ✅ Includes reviewer details
+          },
+        },
+      },
+    });
+
+    // **Ensure clerkUserId is available**
+    const processedServices = services.map(service => ({
+      ...service,
+      createdBy: service.createdBy
+        ? {
+            id: service.createdBy.id,
+            email: service.createdBy.email,
+            clerkUserId: service.createdBy.clerkUserId, // ✅ Ensure it's included
+          }
+        : null,
+    }));
+
+    return res.status(200).json({ services: processedServices });
   } catch (err) {
-    console.error(err);
+    console.error("Error fetching services:", err);
     return res.status(500).send("Internal Server Error");
   }
 };
 
-const createSearchQuery = (searchTerm, category) => ({
-  where: {
-    OR: [
-      searchTerm ? { title: { contains: searchTerm, mode: "insensitive" } } : {},
-      category ? { category: { contains: category, mode: "insensitive" } } : {},
-    ],
-  },
-  include: {
-    reviews: { include: { reviewer: true } },
-    createdBy: true,
-  },
-});
+
+
+
+
 
 const checkOrder = async (userId, gigId) => {
   try {
-    const prisma = new PrismaClient();
+    
     const hasUserOrderedGig = await prisma.orders.findFirst({
       where: {
         buyerId: parseInt(userId),
