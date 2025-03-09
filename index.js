@@ -15,21 +15,24 @@ const app = express();
 
 const port = process.env.PORT || 3000;
 
+console.log("Applying CORS middleware");
 app.use(cors({ origin: [process.env.CORS_ORIGIN], 
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
  }));
 
  
- app.use("/uploads", express.static("uploads"));
+
 app.use(cookieParser());
 app.use(express.json());
+console.log("Applying Clerk middleware");
 app.use(clerkMiddleware());
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.url}`);
     next();
   });
 
+console.log("Applying Clerk middleware");
 // Instead, protect only specific routes in route files
 app.use("/api/users", authRoutes);
 app.use("/api/services",requireAuth(), serviceRoutes);
