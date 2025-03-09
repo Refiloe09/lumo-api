@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { existsSync, renameSync, unlinkSync } from "fs";
+import cloudinary from "../config/cloudinary.js";
 
 const prisma = new PrismaClient(); // ✅ Create a single Prisma instance
 
@@ -7,15 +7,16 @@ export const addService = async (req, res, next) => {
   try {
     if (req.files) {
       const fileKeys = Object.keys(req.files);
-      const fileNames = [];
-      fileKeys.forEach((file) => {
-        const date = Date.now();
-        renameSync(
-          req.files[file].path,
-          "uploads/" + date + req.files[file].originalname
-        );
-        fileNames.push(date + req.files[file].originalname);
-      });
+      const imageUrls = [];
+      for (const file of fileKeys) {
+        const result = await new Promise((resolve, reject) => {
+          cloudinary.uploader.upload_stream(
+            { folder: "lumo-service-uploads" }, // Optional: organize in a folder
+            (error, result) => (error ? reject(error) : resolve(result))
+          ).end(req.files[file].data);
+        });
+        imageUrls.push(result.secure_url); // Store the public URL
+      }
 
       if (req.query) {
         const {
@@ -49,7 +50,7 @@ export const addService = async (req, res, next) => {
             shortDesc,
             revisions: parseInt(revisions),
             createdBy: { connect: { id: user.id } }, // ✅ Connect using DB ID
-            images: fileNames,
+            images: imageUrls,
           },
         });
 
@@ -146,15 +147,16 @@ export const editService = async (req, res, next) => {
   try {
     if (req.files) {
       const fileKeys = Object.keys(req.files);
-      const fileNames = [];
-      fileKeys.forEach((file) => {
-        const date = Date.now();
-        renameSync(
-          req.files[file].path,
-          "uploads/" + date + req.files[file].originalname
-        );
-        fileNames.push(date + req.files[file].originalname);
-      });
+      const imageUrls = [];
+      for (const file of fileKeys) {
+        const result = await new Promise((resolve, reject) => {
+          cloudinary.uploader.upload_stream(
+            { folder: "lumo-service-uploads" }, // Optional: organize in a folder
+            (error, result) => (error ? reject(error) : resolve(result))
+          ).end(req.files[file].data);
+        });
+        imageUrls.push(result.secure_url); // Store the public URL
+      }
 
       const { title, description, category, features, price, revisions, time, shortDesc } = req.query;
 
@@ -183,13 +185,17 @@ export const editService = async (req, res, next) => {
           shortDesc,
           revisions: parseInt(revisions),
           createdBy: { connect: { id: user.id } }, // ✅ Correct reference
-          images: fileNames,
+          images: imageUrls,
         },
       });
 
-      oldData?.images.forEach((image) => {
-        if (existsSync(`uploads/${image}`)) unlinkSync(`uploads/${image}`);
-      });
+      // ✅ Delete old images from Cloudinary
+      if (oldData.images.length) {
+        for (const img of oldData.images) {
+          const publicId = img.split("/").pop().split(".")[0];
+          cloudinary.uploader.destroy(publicId);
+        }
+      }
 
       return res.status(201).send("Successfully edited the service.");
     }
