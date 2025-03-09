@@ -85,6 +85,7 @@ export const confirmOrder = async (req, res, next) => {
 };
 
 export const getBuyerOrders = async (req, res, next) => {
+  console.log('getBuyerOrders called with:', req.auth.userId);
   try {
     const user = await prisma.user.findUnique({
       where: { clerkUserId: req.auth.userId },
@@ -98,7 +99,7 @@ export const getBuyerOrders = async (req, res, next) => {
       where: { buyerId: user.id, isCompleted: true },
       include: { services: true },
     });
-
+    console.log('getBuyerOrders orders:', orders);
     return res.status(200).json({ orders });
   } catch (err) {
     console.error("Error fetching buyer orders:", err);
