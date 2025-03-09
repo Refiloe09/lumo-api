@@ -7,7 +7,7 @@ import { serviceRoutes } from "./routes/ServicesRoutes.js";
 import { orderRoutes } from "./routes/OrderRoutes.js";
 import { messageRoutes } from "./routes/MessageRoutes.js";
 import { dashboardRoutes } from "./routes/DashboardRoutes.js";
-import { requireAuth } from '@clerk/express';
+import { clerkMiddleware ,requireAuth } from '@clerk/express';
 
 dotenv.config();
 
@@ -24,7 +24,7 @@ app.use(cors({ origin: [process.env.CORS_ORIGIN],
  app.use("/uploads", express.static("uploads"));
 app.use(cookieParser());
 app.use(express.json());
-
+app.use(clerkMiddleware());
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.url}`);
     next();
@@ -32,9 +32,9 @@ app.use((req, res, next) => {
 
 // Instead, protect only specific routes in route files
 app.use("/api/users", authRoutes);
-app.use("/api/services", serviceRoutes);
-app.use("/api/orders",  orderRoutes);
-app.use("/api/messages",  messageRoutes);
+app.use("/api/services",requireAuth(), serviceRoutes);
+app.use("/api/orders",requireAuth(),  orderRoutes);
+app.use("/api/messages",requireAuth(),  messageRoutes);
 app.use("/api/dashboard", requireAuth(), dashboardRoutes);
 
 app.get('/', (req, res) => {
