@@ -32,7 +32,7 @@ app.use((req, res, next) => {
 
 // Instead, protect only specific routes in route files
 app.use("/api/users", authRoutes);
-app.use("/api/services",   serviceRoutes);
+app.use("/api/services", serviceRoutes);
 app.use("/api/orders",  orderRoutes);
 app.use("/api/messages",  messageRoutes);
 app.use("/api/dashboard", requireAuth(), dashboardRoutes);

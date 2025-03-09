@@ -1,6 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+// import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient(); // ✅ Reuse Prisma instance
+// const prisma = new PrismaClient(); // ✅ Reuse Prisma instance
+import prisma from "../prisma/client.js";
 
 export const getSellerData = async (req, res, next) => {
   try {

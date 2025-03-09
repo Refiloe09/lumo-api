@@ -1,6 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+// import { PrismaClient } from "@prisma/client";
+import prisma from "../prisma/client.js";
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 export const createUserIfNotExists = async (req, res) => {
   console.log('createUserIfNotExists called with:', req.body);

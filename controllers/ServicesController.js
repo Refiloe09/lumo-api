@@ -1,5 +1,6 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+// import { PrismaClient, Prisma } from "@prisma/client";
 import cloudinary from "../config/cloudinary.js";
+import prisma from "../prisma/client.js";
 
 const prisma = new PrismaClient(); // ✅ Create a single Prisma instance
 
@@ -15,7 +16,11 @@ export const addService = async (req, res, next) => {
             (error, result) => (error ? reject(error) : resolve(result))
           ).end(req.files[file].data);
         });
-        imageUrls.push(result.secure_url); // Store the public URL
+        imageUrls.push({ url: result.secure_url, publicId: result.public_id }); // Store the public URL
+      }
+
+      if (imageUrls.length === 0) {
+        return res.status(400).send("At least one image is required.");
       }
 
       if (req.query) {
@@ -45,7 +50,7 @@ export const addService = async (req, res, next) => {
             description,
             deliveryTime: parseInt(time),
             category,
-            features,
+            features: JSON.parse(features),
             price: parseInt(price),
             shortDesc,
             revisions: parseInt(revisions),
@@ -151,18 +156,17 @@ export const editService = async (req, res, next) => {
       for (const file of fileKeys) {
         const result = await new Promise((resolve, reject) => {
           cloudinary.uploader.upload_stream(
-            { folder: "lumo-service-uploads" }, // Optional: organize in a folder
+            { folder: "lumo-service-uploads" },
             (error, result) => (error ? reject(error) : resolve(result))
           ).end(req.files[file].data);
         });
-        imageUrls.push(result.secure_url); // Store the public URL
+        imageUrls.push({ url: result.secure_url, publicId: result.public_id }); // Store public_id
       }
 
       const { title, description, category, features, price, revisions, time, shortDesc } = req.query;
 
-      // ✅ Fetch correct user ID
       const user = await prisma.user.findUnique({
-        where: { clerkUserId: req.auth.userId }, // ✅ Correct lookup
+        where: { clerkUserId: req.auth.userId },
       });
 
       if (!user) {
@@ -180,26 +184,25 @@ export const editService = async (req, res, next) => {
           description,
           deliveryTime: parseInt(time),
           category,
-          features,
+          features: JSON.parse(features),
           price: parseInt(price),
           shortDesc,
           revisions: parseInt(revisions),
-          createdBy: { connect: { id: user.id } }, // ✅ Correct reference
-          images: imageUrls,
+          createdBy: { connect: { id: user.id } },
+          images: imageUrls.map(img => img.url), // Store only URLs in images
         },
       });
 
-      // ✅ Delete old images from Cloudinary
-      if (oldData.images.length) {
-        for (const img of oldData.images) {
-          const publicId = img.split("/").pop().split(".")[0];
-          cloudinary.uploader.destroy(publicId);
+      // Delete old images from Cloudinary using public_id
+      if (oldData?.images) {
+        for (const imgUrl of oldData.images) {
+          const publicId = imgUrl.split("/").pop().split(".")[0]; // This is still approximate; see note below
+          await cloudinary.uploader.destroy(publicId);
         }
       }
 
       return res.status(201).send("Successfully edited the service.");
     }
-
     return res.status(400).send("All properties should be required.");
   } catch (err) {
     console.error(err);
