@@ -2,7 +2,7 @@
 import cloudinary from "../config/cloudinary.js";
 import prisma from "../prisma/client.js";
 
-const prisma = new PrismaClient(); // ✅ Create a single Prisma instance
+// const prisma = new PrismaClient(); // ✅ Create a single Prisma instance
 
 export const addService = async (req, res, next) => {
   try {
