@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export const createUserIfNotExists = async (req, res) => {
+  console.log('createUserIfNotExists called with:', req.body);
   try {
     
     const { userId, email } = req.body; // Clerk User ID
@@ -24,7 +25,7 @@ export const createUserIfNotExists = async (req, res) => {
         },
       });
     }
-
+    console.log('User sync attempt for:', { userId, email });
     res.json(user);
   } catch (error) {
     console.error("User sync error:", error);

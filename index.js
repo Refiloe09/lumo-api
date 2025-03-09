@@ -25,12 +25,21 @@ app.use(cors({ origin: [process.env.CORS_ORIGIN],
 app.use(cookieParser());
 app.use(express.json());
 
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
+  });
+
 // Instead, protect only specific routes in route files
 app.use("/api/users", authRoutes);
 app.use("/api/services", requireAuth(), serviceRoutes);
 app.use("/api/orders", requireAuth(), orderRoutes);
 app.use("/api/messages", requireAuth(), messageRoutes);
 app.use("/api/dashboard", requireAuth(), dashboardRoutes);
+
+app.get('/', (req, res) => {
+    res.status(200).json({ message: 'API is running' });
+  });
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
