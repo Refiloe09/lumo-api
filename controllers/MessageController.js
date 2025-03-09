@@ -5,13 +5,13 @@ import prisma from "../prisma/client.js";
 
 export const addMessage = async (req, res, next) => {
   try {
-    if (!req.auth.userId || !req.body.recipientId || !req.params.orderId || !req.body.message) {
+    if (!req.body.senderId || !req.body.recipientId || !req.params.orderId || !req.body.message) {
       return res.status(400).send("userId, recipientId, orderId, and message are required.");
     }
 
     // ✅ Fetch sender's correct user ID
     const sender = await prisma.user.findUnique({
-      where: { clerkUserId: req.auth.userId },
+      where: { clerkUserId: req.body.senderId },
     });
 
     if (!sender) {
@@ -36,13 +36,13 @@ export const addMessage = async (req, res, next) => {
 
 export const getMessages = async (req, res, next) => {
   try {
-    if (!req.params.orderId || !req.auth.userId) {
+    if (!req.params.orderId || !req.params.userId) {
       return res.status(400).send("Order id is required.");
     }
 
     // ✅ Fetch correct user ID
     const user = await prisma.user.findUnique({
-      where: { clerkUserId: req.auth.userId },
+      where: { clerkUserId: req.params.userId },
     });
 
     if (!user) {

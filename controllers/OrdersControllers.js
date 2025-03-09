@@ -9,9 +9,10 @@ export const createOrder = async (req, res, next) => {
     }
 
     const { serviceId } = req.body;
+    const { clerkUserId } = req.body;
 
     const user = await prisma.user.findUnique({
-      where: { clerkUserId: req.auth.userId },
+      where: { clerkUserId: clerkUserId },
     });
 
     if (!user) {
@@ -85,15 +86,15 @@ export const confirmOrder = async (req, res, next) => {
 };
 
 export const getBuyerOrders = async (req, res, next) => {
-  console.log('getBuyerOrders - Full req.auth:', req.auth);
-  if (!req.auth || !req.auth.userId) {
-    console.error("Authentication failed: req.auth or req.auth.userId is undefined");
+  
+  if (!req.query.clerkUserId) {
+    console.error("Authentication failed: req.query.clerkUserId is undefined");
     return res.status(401).send("Unauthorized: Missing or invalid authentication");
   }
-  
+
   try {
     const user = await prisma.user.findUnique({
-      where: { clerkUserId: req.auth.userId },
+      where: { clerkUserId: req.query.clerkUserId },
     });
 
     if (!user) {
@@ -115,7 +116,7 @@ export const getBuyerOrders = async (req, res, next) => {
 export const getSellerOrders = async (req, res, next) => {
   try {
     const seller = await prisma.user.findUnique({
-      where: { clerkUserId: req.auth.userId },
+      where: { clerkUserId: req.query.clerkUserId },
     });
 
     if (!seller) {

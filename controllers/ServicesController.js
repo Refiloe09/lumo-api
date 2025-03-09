@@ -37,7 +37,7 @@ export const addService = async (req, res, next) => {
 
         // ✅ Fetch correct user ID from Clerk User
         const user = await prisma.user.findUnique({
-          where: { clerkUserId: req.auth.userId }, // ✅ Correct lookup
+          where: { clerkUserId: req.query.userId }, // ✅ Correct lookup
         });
 
         if (!user) {
@@ -72,7 +72,7 @@ export const addService = async (req, res, next) => {
 export const getUserAuthServices = async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
-      where: { clerkUserId: req.auth.userId }, // ✅ Correct lookup
+      where: { clerkUserId: req.params.userId }, // ✅ Correct lookup
       include: { services: true },
     });
 
@@ -163,10 +163,10 @@ export const editService = async (req, res, next) => {
         imageUrls.push({ url: result.secure_url, publicId: result.public_id }); // Store public_id
       }
 
-      const { title, description, category, features, price, revisions, time, shortDesc } = req.query;
+      const { title, description, category, features, price, revisions, time, shortDesc } = req.params;
 
       const user = await prisma.user.findUnique({
-        where: { clerkUserId: req.auth.userId },
+        where: { clerkUserId: req.params.userId },
       });
 
       if (!user) {
@@ -311,8 +311,9 @@ export const checkServiceOrder = async (req, res, next) => {
 
 export const addReview = async (req, res, next) => {
   try {
+    const { userId } = req.body;
     const user = await prisma.user.findUnique({
-      where: { clerkUserId: req.auth.userId }, // ✅ Correct lookup
+      where: { clerkUserId: userId }, // ✅ Correct lookup
     });
 
     if (!user) {
