@@ -203,7 +203,7 @@ export const editService = async (req, res, next) => {
 
 export const searchServices = async (req, res, next) => {
   try {
-    console.log(req.query);
+    console.log('searchServices called with query:', req.query);
     let { query, category } = req.query;
 
     // Ensure values are valid strings or set them to `null`
@@ -243,7 +243,7 @@ export const searchServices = async (req, res, next) => {
         },
       },
     });
-
+    console.log('Raw services from Prisma:', services);
     // **Ensure clerkUserId is available**
     const processedServices = services.map(service => ({
       ...service,
@@ -255,7 +255,7 @@ export const searchServices = async (req, res, next) => {
           }
         : null,
     }));
-
+    console.log('Processed services response:', { services: processedServices });
     return res.status(200).json({ services: processedServices });
   } catch (err) {
     console.error("Error fetching services:", err);
