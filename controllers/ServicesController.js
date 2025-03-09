@@ -211,6 +211,7 @@ export const editService = async (req, res, next) => {
 };
 
 export const searchServices = async (req, res, next) => {
+  console.log("searchServices route hit with query:", req.query);
   try {
     console.log('searchServices called with query:', req.query);
     let { query, category } = req.query;
